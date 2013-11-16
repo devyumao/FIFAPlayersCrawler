@@ -34,7 +34,12 @@ function playerParser(html) {
 	player['awr'] = $lis.eq(4).find('span').text();
 	player['dwr'] = $lis.eq(5).find('span').text();
 
-	var $club = $article.find('.player-team').eq(0);
+	var $club = null;
+	if ($article.find('.player-team').eq(1).find('h6').text() === "自由球员") {
+		$club = $article.find('.player-team').eq(1);
+	} else {
+		$club = $article.find('.player-team').eq(0);
+	}
 	player['club'] = {
 		name: $club.find('h6').text(),
 		logo: $club.find('.logo').attr('src')
