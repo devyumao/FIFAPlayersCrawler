@@ -1,5 +1,26 @@
 var fs = require('fs');
 var $ = require('jquery');
+var path = require('path');
+
+var fileType = 'json';
+var domain = 'http://sofifa.com';
+var pagesAmount = 333;
+
+var mkdirs = function(dirpath, mode, callback) {
+	mode = mode || 0755;
+    callback = callback || function(){};
+    fs.exists(dirpath, function(exists) {
+        if(exists) {
+            callback(dirpath);
+        } else {
+            mkdirs(path.dirname(dirpath), mode, function(){
+                fs.mkdir(dirpath, mode, callback);
+            });
+        }
+    });
+};
+
+mkdirs('player');
 
 function playerParser(html) {
 	var $article = $(html).find('article');
@@ -117,12 +138,51 @@ function playerParser(html) {
 	return player;
 }
 
+function rankParser(html) {
+	var rank = [];
+	var $trs = $(html).find('tbody').find('tr');
 
-$.get('http://sofifa.com/cn/14w/p/148290-mesut-ozil', function(html) {
-	var player = playerParser(html);
-	fs.writeFile('test.json', JSON.stringify(player), function(err) {
-		if (err) throw err;
-		console.log('Saved!');
-	});
-});
+	for (var i = 0, len = $trs.length; i < len; ++i) {
+		(function() {
+			var item = {};
+			var $tds = $trs.eq(i).find('td');
+			var urlComp = $tds.eq(2).find('img').attr('data-frz-src').split('/');
+			var id = urlComp[urlComp.length - 1].split('.')[0];
+			item.fileName = i + 1 + '-' + id;
+			item.link = $tds.eq(5).find('a').attr('href');
+			rank.push(item);
+		})();
+	}
+
+	return rank;
+}
+
+
+
+for (var iPage = 1; iPage <= pagesAmount; ++iPage) {
+	(function(indexP) {
+		$.get(domain + '/cn/14w/p/a?col=oa&desc=true&page=' +　indexP, function(rankHTML) {
+			var rank = rankParser(rankHTML);
+			var dir = 'players/' + indexP;
+
+			mkdirs(dir, 0755, function() {				
+				for (var i = 0, len = rank.length; i < len; ++i) {
+					(function(index) {
+						$.get(domain + rank[index].link, function(playerHTML) {
+							var player = playerParser(playerHTML);
+							var file = dir + '/' + rank[index].fileName + '.' + fileType;
+							fs.writeFile(file, JSON.stringify(player), function(err) {
+								if (err) throw err;
+								console.log(file + ' Saved!');
+							});
+						});
+					})(i);
+				}
+			});			
+		});
+	})(iPage);
+}
+
+
+	
 
