@@ -20,8 +20,6 @@ var mkdirs = function(dirpath, mode, callback) {
     });
 };
 
-mkdirs('player');
-
 function playerParser(html) {
 	var $article = $(html).find('article');
 	
@@ -157,9 +155,7 @@ function rankParser(html) {
 	return rank;
 }
 
-
-
-for (var iPage = 1; iPage <= pagesAmount; ++iPage) {
+for (var iPage = 3; iPage <= pagesAmount; ++iPage) {
 	(function(indexP) {
 		$.get(domain + '/cn/14w/p/a?col=oa&desc=true&page=' +　indexP, function(rankHTML) {
 			var rank = rankParser(rankHTML);
@@ -182,7 +178,3 @@ for (var iPage = 1; iPage <= pagesAmount; ++iPage) {
 		});
 	})(iPage);
 }
-
-
-	
-
