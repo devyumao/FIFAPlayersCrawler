@@ -5,6 +5,7 @@ var path = require('path');
 var fileType = 'json';
 var domain = 'http://sofifa.com';
 var pagesAmount = 333;
+var dataDir = 'players1';
 
 var mkdirs = function(dirpath, mode, callback) {
 	mode = mode || 0755;
@@ -35,7 +36,7 @@ function playerParser(html) {
 		name: $lis.eq(0).text().split('\n')[1]
 	};
 	player['birthday'] = $lis.eq(1).text().match(/\([^\)]+\)/)[0].slice(1, -1);
-	player['height'] = $lis.eq(2).text().substr(0, 4) - 0;
+	player['height'] = $lis.eq(2).text().split('\n')[1].substr(0, 3) - 0;
 	player['weight'] = $lis.eq(2).text().split(' ')[1].substr(0, 2) - 0;
 	player['overall'] = $lis.eq(3).find('.prop').text() - 0;
 	player['potential'] = $lis.eq(4).find('.prop').text() - 0;
@@ -54,7 +55,7 @@ function playerParser(html) {
 	player['dwr'] = $lis.eq(5).find('span').text();
 
 	var $club = null;
-	if ($article.find('.player-team').eq(1).find('h6').text() === "自由球员") {
+	if ($article.find('.player-team').length === 2) {
 		$club = $article.find('.player-team').eq(1);
 	} else {
 		$club = $article.find('.player-team').eq(0);
@@ -75,28 +76,6 @@ function playerParser(html) {
 		volleys: $lis.eq(4).find('.prop').text() - 0
 	};
 	$lis = $attr.eq(1).find('li');
-	player['power'] = {
-		shotpower: $lis.eq(0).find('.prop').text() - 0,
-		jumping: $lis.eq(1).find('.prop').text() - 0,
-		stamina: $lis.eq(2).find('.prop').text() - 0,
-		strength: $lis.eq(3).find('.prop').text() - 0,
-		longshots: $lis.eq(4).find('.prop').text() - 0
-	};
-	$lis = $attr.eq(2).find('li');
-	player['defending'] = {
-		marking: $lis.eq(0).find('.prop').text() - 0,
-		standing: $lis.eq(1).find('.prop').text() - 0,
-		sliding: $lis.eq(2).find('.prop').text() - 0
-	};
-	$lis = $attr.eq(3).find('li');
-	player['mentality'] = {
-		aggressing: $lis.eq(0).find('.prop').text() - 0,
-		interceptions: $lis.eq(1).find('.prop').text() - 0,
-		positioning: $lis.eq(2).find('.prop').text() - 0,
-		vision: $lis.eq(3).find('.prop').text() - 0,
-		penalties: $lis.eq(4).find('.prop').text() - 0
-	};
-	$lis = $attr.eq(4).find('li');
 	player['skill'] = {
 		dribbling: $lis.eq(0).find('.prop').text() - 0,
 		curve: $lis.eq(1).find('.prop').text() - 0,
@@ -104,13 +83,35 @@ function playerParser(html) {
 		lpassing: $lis.eq(3).find('.prop').text() - 0,
 		control: $lis.eq(4).find('.prop').text() - 0
 	};
-	$lis = $attr.eq(5).find('li');
+	$lis = $attr.eq(2).find('li');
 	player['movement'] = {
 		acceleration: $lis.eq(0).find('.prop').text() - 0,
 		speed: $lis.eq(1).find('.prop').text() - 0,
 		agility: $lis.eq(2).find('.prop').text() - 0,
 		reactions: $lis.eq(3).find('.prop').text() - 0,
 		balance: $lis.eq(4).find('.prop').text() - 0
+	};
+	$lis = $attr.eq(3).find('li');
+	player['power'] = {
+		shotpower: $lis.eq(0).find('.prop').text() - 0,
+		jumping: $lis.eq(1).find('.prop').text() - 0,
+		stamina: $lis.eq(2).find('.prop').text() - 0,
+		strength: $lis.eq(3).find('.prop').text() - 0,
+		longshots: $lis.eq(4).find('.prop').text() - 0
+	};
+	$lis = $attr.eq(4).find('li');
+	player['mentality'] = {
+		aggressing: $lis.eq(0).find('.prop').text() - 0,
+		interceptions: $lis.eq(1).find('.prop').text() - 0,
+		positioning: $lis.eq(2).find('.prop').text() - 0,
+		vision: $lis.eq(3).find('.prop').text() - 0,
+		penalties: $lis.eq(4).find('.prop').text() - 0
+	};
+	$lis = $attr.eq(5).find('li');
+	player['defending'] = {
+		marking: $lis.eq(0).find('.prop').text() - 0,
+		standing: $lis.eq(1).find('.prop').text() - 0,
+		sliding: $lis.eq(2).find('.prop').text() - 0
 	};
 	$lis = $attr.eq(6).find('li');
 	player['gk'] = {
@@ -155,26 +156,38 @@ function rankParser(html) {
 	return rank;
 }
 
-for (var iPage = 3; iPage <= pagesAmount; ++iPage) {
-	(function(indexP) {
-		$.get(domain + '/cn/14w/p/a?col=oa&desc=true&page=' +　indexP, function(rankHTML) {
-			var rank = rankParser(rankHTML);
-			var dir = 'players/' + indexP;
+function crawlAllPlayers() {
+	for (var iPage = 1; iPage <= pagesAmount; ++iPage) {
+		(function(indexP) {
+			$.get(domain + '/cn/14w/p/a?col=oa&desc=true&page=' +　indexP, function(rankHTML) {
+				var rank = rankParser(rankHTML);
+				var dir = dataDir + '/' + indexP;
 
-			mkdirs(dir, 0755, function() {				
-				for (var i = 0, len = rank.length; i < len; ++i) {
-					(function(index) {
-						$.get(domain + rank[index].link, function(playerHTML) {
-							var player = playerParser(playerHTML);
-							var file = dir + '/' + rank[index].fileName + '.' + fileType;
-							fs.writeFile(file, JSON.stringify(player), function(err) {
-								if (err) throw err;
-								console.log(file + ' Saved!');
+				mkdirs(dir, 0755, function() {
+					console.log('Processing ' + dir + ' ...');				
+					for (var i = 0, len = rank.length; i < len; ++i) {
+						(function(index) {
+							$.get(domain + rank[index].link, function(playerHTML) {
+								var player = playerParser(playerHTML);
+								var file = dir + '/' + rank[index].fileName + '.' + fileType;
+								fs.writeFile(file, JSON.stringify(player), function(err) {
+									if (err) throw err;
+									console.log(file + ' Saved!');
+								});
 							});
-						});
-					})(i);
-				}
-			});			
-		});
-	})(iPage);
+						})(i);
+					}
+				});			
+			});
+		})(iPage);
+	}
 }
+
+function crawlOnePlayer() {
+	$.get('http://sofifa.com/cn/14w/p/149162-aleksandar-dragovic', function(html) {
+		var player = playerParser(html);
+		console.log(player);
+	});
+}
+
+crawlAllPlayers();
